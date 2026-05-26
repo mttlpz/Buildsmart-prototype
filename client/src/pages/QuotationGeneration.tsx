@@ -5,6 +5,7 @@ import { ProgressStepper } from "@/components/layout/ProgressStepper";
 import { UploadBlueprintTab } from "@/components/quotation/UploadBlueprintTab";
 import { QuickMeasurementTab } from "@/components/quotation/QuickMeasurementTab";
 import { ReviewSegmentsTab } from "@/components/quotation/ReviewSegmentsTab";
+import { AssignScopeTab } from "@/components/quotation/AssignScopeTab";
 
 type ActiveTab = "upload" | "quick";
 
@@ -28,17 +29,16 @@ export function QuotationGeneration() {
 
   const steps = activeTab === "upload" ? uploadSteps : quickSteps;
 
-  const isReviewing = activeTab === "upload" && activeStep === 2;
-
-  const handleBeginSegmentation = () => setActiveStep(2);
-  const handleConfirmSegments = () => setActiveStep(3);
-  const handleBackToUpload = () => setActiveStep(1);
+  const isReviewing    = activeTab === "upload" && activeStep === 2;
+  const isAssignScope  = activeTab === "upload" && activeStep === 3;
+  const isFullscreen   = isReviewing || isAssignScope;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-50 font-['Poppins',Helvetica,sans-serif]">
       <Sidebar />
 
       <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Global header */}
         <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-5 shadow-sm">
           <div className="flex items-center gap-3 min-w-0 overflow-x-auto">
             <ProgressStepper steps={steps} activeStep={activeStep} />
@@ -55,16 +55,32 @@ export function QuotationGeneration() {
           </div>
         </header>
 
-        {isReviewing ? (
+        {/* Step: Review Segments */}
+        {isReviewing && (
           <div className="flex flex-1 overflow-hidden">
-            <main className="flex flex-1 flex-col overflow-y-auto p-5">
+            <main className="flex flex-1 flex-col overflow-hidden p-5">
               <ReviewSegmentsTab
-                onConfirm={handleConfirmSegments}
-                onBack={handleBackToUpload}
+                onConfirm={() => setActiveStep(3)}
+                onBack={() => setActiveStep(1)}
               />
             </main>
           </div>
-        ) : (
+        )}
+
+        {/* Step: Assign Scope */}
+        {isAssignScope && (
+          <div className="flex flex-1 overflow-hidden">
+            <main className="flex flex-1 flex-col overflow-hidden p-5">
+              <AssignScopeTab
+                onNext={() => setActiveStep(4)}
+                onBack={() => setActiveStep(2)}
+              />
+            </main>
+          </div>
+        )}
+
+        {/* Steps 1 / Quick tabs */}
+        {!isFullscreen && (
           <div className="flex flex-1 overflow-hidden">
             <main className="flex flex-1 flex-col overflow-y-auto">
               <div className="border-b border-gray-200 bg-white">
@@ -73,38 +89,30 @@ export function QuotationGeneration() {
                     data-testid="tab-upload-blueprint"
                     onClick={() => { setActiveTab("upload"); setActiveStep(1); }}
                     className={`relative px-8 py-4 text-sm font-semibold transition-colors ${
-                      activeTab === "upload"
-                        ? "text-[#E07B39]"
-                        : "text-gray-500 hover:text-gray-700"
+                      activeTab === "upload" ? "text-[#E07B39]" : "text-gray-500 hover:text-gray-700"
                     }`}
                   >
                     Upload Blueprint
-                    {activeTab === "upload" && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E07B39]" />
-                    )}
+                    {activeTab === "upload" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E07B39]" />}
                   </button>
                   <button
                     data-testid="tab-quick-measurement"
                     onClick={() => { setActiveTab("quick"); setActiveStep(1); }}
                     className={`relative px-8 py-4 text-sm font-semibold transition-colors ${
-                      activeTab === "quick"
-                        ? "text-[#E07B39]"
-                        : "text-gray-500 hover:text-gray-700"
+                      activeTab === "quick" ? "text-[#E07B39]" : "text-gray-500 hover:text-gray-700"
                     }`}
                   >
                     Quick Measurement
-                    {activeTab === "quick" && (
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E07B39]" />
-                    )}
+                    {activeTab === "quick" && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E07B39]" />}
                   </button>
                 </div>
               </div>
 
               <div className="flex-1 p-5">
                 {activeTab === "upload" ? (
-                  <UploadBlueprintTab onBeginSegmentation={handleBeginSegmentation} />
+                  <UploadBlueprintTab onBeginSegmentation={() => setActiveStep(2)} />
                 ) : (
-                  <QuickMeasurementTab onConfirm={handleConfirmSegments} />
+                  <QuickMeasurementTab onConfirm={() => setActiveStep(2)} />
                 )}
               </div>
             </main>
@@ -113,8 +121,7 @@ export function QuotationGeneration() {
               {activeTab === "upload" ? (
                 <div>
                   <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                    <Upload className="h-4 w-4" />
-                    Upload Session
+                    <Upload className="h-4 w-4" /> Upload Session
                   </h3>
                   <div className="rounded border border-dashed border-gray-200 py-8 text-center text-xs text-gray-400">
                     No uploads yet
@@ -123,8 +130,7 @@ export function QuotationGeneration() {
               ) : (
                 <div>
                   <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                    <Layers className="h-4 w-4" />
-                    Group Segments
+                    <Layers className="h-4 w-4" /> Group Segments
                   </h3>
                   <div className="rounded border border-dashed border-gray-200 py-8 text-center text-xs text-gray-400">
                     No groups yet
