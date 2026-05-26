@@ -15,25 +15,12 @@ const STAGES = [
 ];
 
 const PRICE_PAIRS = [
-  { a: "$38,200", b: "$52,800" },
-  { a: "$41,550", b: "$57,300" },
-  { a: "$43,100", b: "$61,900" },
-  { a: "$44,780", b: "$65,400" },
-  { a: "$45,320", b: "$67,850" },
+  { a: 2_139_200, b: 2_956_800 },
+  { a: 2_326_800, b: 3_208_800 },
+  { a: 2_413_600, b: 3_466_400 },
+  { a: 2_507_680, b: 3_662_400 },
+  { a: 2_537_920, b: 3_799_600 },
 ];
-
-interface FloatingCard {
-  id: number;
-  x: number;
-  y: number;
-  rotate: number;
-  scale: number;
-  opacity: number;
-  label: string;
-  price: string;
-  color: "orange" | "blue";
-  delay: number;
-}
 
 function DonutRing({ progress }: { progress: number }) {
   const r = 52;
@@ -56,29 +43,17 @@ function DonutRing({ progress }: { progress: number }) {
 }
 
 export function GeneratingQuotationScreen({ onComplete }: GeneratingQuotationScreenProps) {
-  const [stageIdx, setStageIdx]         = useState(0);
-  const [progress, setProgress]         = useState(0);
-  const [priceIdx, setPriceIdx]         = useState(0);
-  const [done, setDone]                 = useState(false);
-  const [cards, setCards]               = useState<FloatingCard[]>([]);
-  const [flipState, setFlipState]       = useState(false);
-  const [countUp, setCountUp]           = useState({ a: 0, b: 0 });
-
-  useEffect(() => {
-    const initialCards: FloatingCard[] = [
-      { id: 1, x: -160, y: -20, rotate: -12, scale: 0.92, opacity: 0.85, label: "Practical", price: "$45,320", color: "orange", delay: 0 },
-      { id: 2, x:  160, y: -20, rotate:  12, scale: 0.92, opacity: 0.85, label: "Premium",   price: "$67,850", color: "blue",   delay: 0.15 },
-      { id: 3, x:  -80, y:  40, rotate:  -6, scale: 0.88, opacity: 0.55, label: "Option C",  price: "$55,000", color: "orange", delay: 0.3 },
-      { id: 4, x:   80, y:  40, rotate:   6, scale: 0.88, opacity: 0.55, label: "Option D",  price: "$72,000", color: "blue",   delay: 0.45 },
-    ];
-    setCards(initialCards);
-  }, []);
+  const [stageIdx, setStageIdx] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [priceIdx, setPriceIdx] = useState(0);
+  const [done, setDone]         = useState(false);
+  const [flipState, setFlipState] = useState(false);
+  const [countUp, setCountUp]   = useState({ a: 0, b: 0 });
 
   useEffect(() => {
     const total = STAGES.reduce((s, st) => s + st.duration, 0);
     let elapsed = 0;
     let si = 0;
-
     const run = () => {
       if (si >= STAGES.length) { setDone(true); setTimeout(onComplete, 1200); return; }
       setStageIdx(si);
@@ -91,12 +66,7 @@ export function GeneratingQuotationScreen({ onComplete }: GeneratingQuotationScr
       const timer = setInterval(() => {
         step++;
         setProgress(startProg + ((endProg - startProg) * step) / steps);
-        if (step >= steps) {
-          clearInterval(timer);
-          elapsed += st.duration;
-          si++;
-          run();
-        }
+        if (step >= steps) { clearInterval(timer); elapsed += st.duration; si++; run(); }
       }, stepMs);
     };
     run();
@@ -112,22 +82,24 @@ export function GeneratingQuotationScreen({ onComplete }: GeneratingQuotationScr
 
   useEffect(() => {
     const pair = PRICE_PAIRS[priceIdx];
-    const targetA = parseInt(pair.a.replace(/\D/g, ""));
-    const targetB = parseInt(pair.b.replace(/\D/g, ""));
     let tick = 0;
     const t = setInterval(() => {
       tick++;
       const frac = Math.min(tick / 8, 1);
-      setCountUp({
-        a: Math.round(frac * targetA),
-        b: Math.round(frac * targetB),
-      });
+      setCountUp({ a: Math.round(frac * pair.a), b: Math.round(frac * pair.b) });
       if (frac >= 1) clearInterval(t);
     }, 30);
     return () => clearInterval(t);
   }, [priceIdx]);
 
-  const fmt = (n: number) => "$" + n.toLocaleString();
+  const fmt = (n: number) => "₱" + n.toLocaleString("en-PH");
+
+  const CARD_POSITIONS = [
+    { x: -160, y: -20, rotate: -12, scale: 0.92, opacity: 0.85, label: "Practical", price: "₱2.54M", color: "orange" },
+    { x:  160, y: -20, rotate:  12, scale: 0.92, opacity: 0.85, label: "Premium",   price: "₱3.80M", color: "blue"   },
+    { x:  -80, y:  40, rotate:  -6, scale: 0.88, opacity: 0.55, label: "Option C",  price: "₱3.08M", color: "orange" },
+    { x:   80, y:  40, rotate:   6, scale: 0.88, opacity: 0.55, label: "Option D",  price: "₱4.03M", color: "blue"   },
+  ];
 
   return (
     <div className="flex h-full flex-col items-center justify-center bg-white rounded-xl overflow-hidden">
@@ -135,27 +107,20 @@ export function GeneratingQuotationScreen({ onComplete }: GeneratingQuotationScr
 
         {/* Animated card stage */}
         <div className="relative flex h-64 w-full items-center justify-center">
-          {/* Background glow */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="h-40 w-80 rounded-full bg-[#E07B39]/10 blur-3xl" />
           </div>
 
-          {/* Shuffling background cards */}
-          {cards.map((c) => (
-            <div
-              key={c.id}
-              className="absolute rounded-2xl border shadow-lg"
+          {CARD_POSITIONS.map((c, i) => (
+            <div key={i} className="absolute rounded-2xl border shadow-lg"
               style={{
-                width: 160,
-                height: 100,
+                width: 160, height: 100,
                 transform: `translate(${c.x}px, ${c.y}px) rotate(${c.rotate}deg) scale(${c.scale})`,
                 opacity: c.opacity,
                 background: c.color === "orange" ? "#fff7f0" : "#f0f4ff",
                 borderColor: c.color === "orange" ? "#E07B39" : "#818cf8",
                 transition: "all 0.9s cubic-bezier(0.34,1.56,0.64,1)",
-                animationDelay: `${c.delay}s`,
-              }}
-            >
+              }}>
               <div className="p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: c.color === "orange" ? "#E07B39" : "#818cf8" }}>{c.label}</p>
                 <p className="mt-1 text-base font-bold text-gray-800">{c.price}</p>
@@ -164,67 +129,45 @@ export function GeneratingQuotationScreen({ onComplete }: GeneratingQuotationScr
             </div>
           ))}
 
-          {/* Center compare panel */}
           <div className="relative z-10 flex items-center gap-3 rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-xl">
-            {/* Card A */}
-            <div
-              className="flex flex-col items-center rounded-xl border border-[#E07B39]/30 bg-[#fff7f0] px-5 py-3 transition-all duration-300"
-              style={{ transform: flipState ? "translateY(-4px)" : "translateY(0)" }}
-            >
+            <div className="flex flex-col items-center rounded-xl border border-[#E07B39]/30 bg-[#fff7f0] px-5 py-3 transition-all duration-300"
+              style={{ transform: flipState ? "translateY(-4px)" : "translateY(0)" }}>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#E07B39]">Practical</p>
               <p className="mt-1 text-lg font-bold text-gray-900 tabular-nums">{fmt(countUp.a)}</p>
             </div>
-
-            {/* VS badge */}
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-500">VS</div>
-
-            {/* Card B */}
-            <div
-              className="flex flex-col items-center rounded-xl border border-indigo-200 bg-[#f0f4ff] px-5 py-3 transition-all duration-300"
-              style={{ transform: flipState ? "translateY(0)" : "translateY(-4px)" }}
-            >
+            <div className="flex flex-col items-center rounded-xl border border-indigo-200 bg-[#f0f4ff] px-5 py-3 transition-all duration-300"
+              style={{ transform: flipState ? "translateY(0)" : "translateY(-4px)" }}>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-500">Premium</p>
               <p className="mt-1 text-lg font-bold text-gray-900 tabular-nums">{fmt(countUp.b)}</p>
             </div>
           </div>
         </div>
 
-        {/* Donut + status */}
+        {/* Donut + stages */}
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <DonutRing progress={progress} />
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {done ? (
-                <CheckCircle2 className="h-8 w-8 text-[#E07B39]" />
-              ) : (
-                <>
-                  <p className="text-xl font-bold text-gray-900">{Math.round(progress)}%</p>
-                  <Zap className="h-3.5 w-3.5 text-[#E07B39]" />
-                </>
+              {done ? <CheckCircle2 className="h-8 w-8 text-[#E07B39]" /> : (
+                <><p className="text-xl font-bold text-gray-900">{Math.round(progress)}%</p><Zap className="h-3.5 w-3.5 text-[#E07B39]" /></>
               )}
             </div>
           </div>
-
-          {/* Stage list */}
           <div className="flex flex-col gap-1.5 text-center">
             {STAGES.map((s, i) => (
-              <p
-                key={i}
-                className={`text-sm transition-all duration-300 ${
-                  i < stageIdx ? "text-green-500 line-through opacity-50" :
-                  i === stageIdx ? "font-semibold text-[#E07B39]" :
-                  "text-gray-300"
-                }`}
-              >
-                {i < stageIdx ? "✓ " : i === stageIdx ? "⟳ " : "  "}
-                {s.label}
+              <p key={i} className={`text-sm transition-all duration-300 ${
+                i < stageIdx ? "text-green-500 line-through opacity-50" :
+                i === stageIdx ? "font-semibold text-[#E07B39]" : "text-gray-300"
+              }`}>
+                {i < stageIdx ? "✓ " : i === stageIdx ? "⟳ " : "  "}{s.label}
               </p>
             ))}
           </div>
         </div>
 
         <p className="text-center text-xs text-gray-400">
-          BuildSmart is analyzing your {17} segments across 2 floors — this usually takes under 10 seconds.
+          BuildSmart is analyzing your 17 segments across 2 floors — this usually takes under 10 seconds.
         </p>
       </div>
     </div>

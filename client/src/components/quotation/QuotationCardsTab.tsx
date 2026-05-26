@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Clock, CheckCircle2, Star, Shield, Zap, ChevronRight, HelpCircle, ArrowRight, Award, TrendingDown } from "lucide-react";
+import { Clock, CheckCircle2, Star, Shield, Zap, ChevronRight, HelpCircle, ArrowRight, Award, TrendingDown, PenLine } from "lucide-react";
 import { QuotationBreakdownModal } from "./QuotationBreakdownModal";
+import { RevisionTypeModal } from "./RevisionTypeModal";
+import { MinorRevisionPanel } from "./MinorRevisionPanel";
 
 export type QuoteType = "practical" | "premium";
 
 interface QuotationCardsTabProps {
   onNext: () => void;
   onBack: () => void;
+  onStructuralRevision: () => void;
 }
 
 const PRACTICAL = {
@@ -14,13 +17,12 @@ const PRACTICAL = {
   label: "Practical",
   tagline: "Cost-effective solution with quality materials",
   badge: "Recommended",
-  badgeColor: "bg-[#E07B39] text-white",
   accentColor: "#E07B39",
   accentBg: "bg-[#fff7f0]",
   accentBorder: "border-[#E07B39]",
   headerBg: "bg-[#E07B39]",
-  price: 45320,
-  priceBreakdown: { materials: 22150, labor: 16800, equipment: 4200, misc: 2170 },
+  price: 2_537_920,
+  priceBreakdown: { materials: 1_240_400, labor: 940_800, equipment: 235_200, misc: 121_520 },
   timeline: "8 – 10 weeks",
   warranty: "1-year workmanship",
   materialGrade: "Standard Grade",
@@ -40,13 +42,12 @@ const PREMIUM = {
   label: "Premium",
   tagline: "High-spec materials with expedited delivery",
   badge: "Best Quality",
-  badgeColor: "bg-indigo-600 text-white",
   accentColor: "#4f46e5",
   accentBg: "bg-[#f0f4ff]",
   accentBorder: "border-indigo-300",
   headerBg: "bg-indigo-600",
-  price: 67850,
-  priceBreakdown: { materials: 34200, labor: 22900, equipment: 7500, misc: 3250 },
+  price: 3_799_600,
+  priceBreakdown: { materials: 1_915_200, labor: 1_282_400, equipment: 420_000, misc: 182_000 },
   timeline: "6 – 7 weeks",
   warranty: "3-year comprehensive",
   materialGrade: "Premium / Imported Grade",
@@ -62,7 +63,7 @@ const PREMIUM = {
 };
 
 function fmt(n: number) {
-  return "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2 });
+  return "₱" + n.toLocaleString("en-PH", { minimumFractionDigits: 2 });
 }
 
 function PriceBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
@@ -73,7 +74,7 @@ function PriceBar({ label, value, max, color }: { label: string; value: number; 
       <div className="flex-1 h-1.5 rounded-full bg-gray-100">
         <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="w-16 text-right font-medium text-gray-700">{fmt(value)}</span>
+      <span className="w-24 text-right font-medium text-gray-700">{fmt(value)}</span>
     </div>
   );
 }
@@ -85,24 +86,22 @@ function QuoteCard({
   quote: typeof PRACTICAL;
   onViewBreakdown: () => void;
 }) {
-  const maxVal = 35000;
+  const maxVal = 2_000_000;
   return (
-    <div
-      className={`flex flex-col rounded-2xl border-2 ${quote.accentBorder} bg-white shadow-lg overflow-hidden transition-shadow hover:shadow-xl`}
-      data-testid={`quote-card-${quote.type}`}
-    >
+    <div className={`flex flex-col rounded-2xl border-2 ${quote.accentBorder} bg-white shadow-lg overflow-hidden transition-shadow hover:shadow-xl`}
+      data-testid={`quote-card-${quote.type}`}>
       {/* Header */}
       <div className={`${quote.headerBg} px-6 py-5 text-white`}>
         <div className="flex items-center justify-between">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">{quote.type === "practical" ? "Option A" : "Option B"}</span>
+            <span className="text-xs font-semibold uppercase tracking-widest opacity-80">
+              {quote.type === "practical" ? "Option A" : "Option B"}
+            </span>
             <h2 className="text-2xl font-bold leading-tight">{quote.label}</h2>
             <p className="mt-0.5 text-sm opacity-80">{quote.tagline}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <span className="rounded-full bg-white/20 px-3 py-0.5 text-xs font-semibold backdrop-blur">
-              {quote.badge}
-            </span>
+            <span className="rounded-full bg-white/20 px-3 py-0.5 text-xs font-semibold backdrop-blur">{quote.badge}</span>
             {quote.type === "premium" && <Star className="h-5 w-5 fill-yellow-300 text-yellow-300" />}
             {quote.type === "practical" && <TrendingDown className="h-5 w-5 text-white/80" />}
           </div>
@@ -110,6 +109,7 @@ function QuoteCard({
         <div className="mt-4 border-t border-white/20 pt-4">
           <p className="text-xs uppercase tracking-widest opacity-70">Total Estimate</p>
           <p className="text-3xl font-extrabold">{fmt(quote.price)}</p>
+          <p className="mt-0.5 text-xs opacity-70">≈ ₱{Math.round(quote.price / 302).toLocaleString("en-PH")} / sqm</p>
         </div>
       </div>
 
@@ -160,9 +160,7 @@ function QuoteCard({
         {/* Flags */}
         <div className="flex flex-wrap gap-1.5">
           {quote.flags.map((f) => (
-            <span key={f} className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${quote.accentBg}`} style={{ color: quote.accentColor }}>
-              {f}
-            </span>
+            <span key={f} className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${quote.accentBg}`} style={{ color: quote.accentColor }}>{f}</span>
           ))}
         </div>
       </div>
@@ -175,28 +173,29 @@ function QuoteCard({
           className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           style={{ background: quote.accentColor }}
         >
-          View Detailed Breakdown
-          <ChevronRight className="h-4 w-4" />
+          View Detailed Breakdown <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>
   );
 }
 
-export function QuotationCardsTab({ onNext, onBack }: QuotationCardsTabProps) {
-  const [breakdownOpen, setBreakdownOpen] = useState(false);
+export function QuotationCardsTab({ onNext, onBack, onStructuralRevision }: QuotationCardsTabProps) {
+  const [breakdownOpen, setBreakdownOpen]   = useState(false);
   const [breakdownQuote, setBreakdownQuote] = useState<QuoteType>("practical");
-  const [helpOpen, setHelpOpen] = useState(false);
+  const [openCompare, setOpenCompare]       = useState(false);
+  const [showRevision, setShowRevision]     = useState(false);
+  const [minorOpen, setMinorOpen]           = useState(false);
 
-  const openBreakdown = (q: QuoteType, openCompare = false) => {
+  const openBreakdown = (q: QuoteType, compare = false) => {
     setBreakdownQuote(q);
+    setOpenCompare(compare);
     setBreakdownOpen(true);
-    if (openCompare) setTimeout(() => setHelpOpen(true), 50);
   };
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      {/* Header row */}
+      {/* Header */}
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Generated Quotations</h1>
@@ -204,13 +203,22 @@ export function QuotationCardsTab({ onNext, onBack }: QuotationCardsTabProps) {
             Based on <span className="font-semibold text-gray-700">17 segments · 302 sqm · 2 floors</span> — choose the plan that fits your budget.
           </p>
         </div>
-        <button
-          data-testid="btn-back-assign-scope"
-          onClick={onBack}
-          className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-        >
-          ← Back
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            data-testid="btn-validate-edit"
+            onClick={() => setShowRevision(true)}
+            className="flex items-center gap-2 rounded-lg border border-[#E07B39] bg-[#fff7f0] px-4 py-2 text-sm font-semibold text-[#E07B39] hover:bg-[#ffe9d6]"
+          >
+            <PenLine className="h-4 w-4" /> Validate & Edit
+          </button>
+          <button
+            data-testid="btn-back-assign-scope"
+            onClick={onBack}
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+          >
+            ← Back
+          </button>
+        </div>
       </div>
 
       {/* Project summary strip */}
@@ -255,8 +263,25 @@ export function QuotationCardsTab({ onNext, onBack }: QuotationCardsTabProps) {
       {breakdownOpen && (
         <QuotationBreakdownModal
           quoteType={breakdownQuote}
-          defaultTab={helpOpen ? "comparison" : "segments"}
-          onClose={() => { setBreakdownOpen(false); setHelpOpen(false); }}
+          defaultTab={openCompare ? "comparison" : "segments"}
+          onClose={() => { setBreakdownOpen(false); setOpenCompare(false); }}
+        />
+      )}
+
+      {/* Revision type modal */}
+      {showRevision && (
+        <RevisionTypeModal
+          onClose={() => setShowRevision(false)}
+          onStructural={() => { setShowRevision(false); onStructuralRevision(); }}
+          onMinor={() => { setShowRevision(false); setMinorOpen(true); }}
+        />
+      )}
+
+      {/* Minor revision panel */}
+      {minorOpen && (
+        <MinorRevisionPanel
+          onClose={() => setMinorOpen(false)}
+          onApply={() => setMinorOpen(false)}
         />
       )}
     </div>
