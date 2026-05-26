@@ -13,7 +13,16 @@ interface UploadBlueprintTabProps {
 }
 
 export function UploadBlueprintTab({ onBeginSegmentation }: UploadBlueprintTabProps) {
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([
+    {
+      name: "d-577-study-sample.pdf",
+      size: "67.67 MB",
+      previews: [
+        "/figmaAssets/blueprint-main-floor.png",
+        "/figmaAssets/blueprint-lower-floor.png",
+      ],
+    },
+  ]);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -117,14 +126,23 @@ export function UploadBlueprintTab({ onBeginSegmentation }: UploadBlueprintTabPr
                     <X className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="flex gap-2">
-                  <div className="h-20 w-32 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-                    Preview 1
+                {file.previews.length > 0 ? (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {file.previews.map((src, pi) => (
+                      <img
+                        key={pi}
+                        src={src}
+                        alt={`Preview ${pi + 1}`}
+                        className="h-24 w-40 flex-shrink-0 rounded object-cover border border-gray-200"
+                      />
+                    ))}
                   </div>
-                  <div className="h-20 w-32 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-400">
-                    Preview 2
+                ) : (
+                  <div className="flex gap-2">
+                    <div className="h-20 w-32 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-400">Preview 1</div>
+                    <div className="h-20 w-32 rounded bg-gray-100 flex items-center justify-center text-xs text-gray-400">Preview 2</div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
