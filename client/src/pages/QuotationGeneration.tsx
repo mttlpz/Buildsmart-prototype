@@ -6,6 +6,8 @@ import { UploadBlueprintTab } from "@/components/quotation/UploadBlueprintTab";
 import { QuickMeasurementTab } from "@/components/quotation/QuickMeasurementTab";
 import { ReviewSegmentsTab } from "@/components/quotation/ReviewSegmentsTab";
 import { AssignScopeTab } from "@/components/quotation/AssignScopeTab";
+import { GeneratingQuotationScreen } from "@/components/quotation/GeneratingQuotationScreen";
+import { QuotationCardsTab } from "@/components/quotation/QuotationCardsTab";
 
 type ActiveTab = "upload" | "quick";
 
@@ -24,14 +26,22 @@ const quickSteps = [
 ];
 
 export function QuotationGeneration() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>("upload");
-  const [activeStep, setActiveStep] = useState(1);
+  const [activeTab, setActiveTab]           = useState<ActiveTab>("upload");
+  const [activeStep, setActiveStep]         = useState(1);
+  const [quotationReady, setQuotationReady] = useState(false);
 
   const steps = activeTab === "upload" ? uploadSteps : quickSteps;
 
-  const isReviewing    = activeTab === "upload" && activeStep === 2;
-  const isAssignScope  = activeTab === "upload" && activeStep === 3;
-  const isFullscreen   = isReviewing || isAssignScope;
+  const isReviewing   = activeTab === "upload" && activeStep === 2;
+  const isAssignScope = activeTab === "upload" && activeStep === 3;
+  const isGenerating  = activeTab === "upload" && activeStep === 4 && !quotationReady;
+  const isResults     = activeTab === "upload" && activeStep === 4 && quotationReady;
+  const isFullscreen  = isReviewing || isAssignScope || isGenerating || isResults;
+
+  const handleGenerateQuotation = () => {
+    setQuotationReady(false);
+    setActiveStep(4);
+  };
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-50 font-['Poppins',Helvetica,sans-serif]">
@@ -55,7 +65,7 @@ export function QuotationGeneration() {
           </div>
         </header>
 
-        {/* Step: Review Segments */}
+        {/* Step 2: Review Segments */}
         {isReviewing && (
           <div className="flex flex-1 overflow-hidden">
             <main className="flex flex-1 flex-col overflow-hidden p-5">
@@ -67,19 +77,43 @@ export function QuotationGeneration() {
           </div>
         )}
 
-        {/* Step: Assign Scope */}
+        {/* Step 3: Assign Scope */}
         {isAssignScope && (
           <div className="flex flex-1 overflow-hidden">
             <main className="flex flex-1 flex-col overflow-hidden p-5">
               <AssignScopeTab
-                onNext={() => setActiveStep(4)}
+                onNext={handleGenerateQuotation}
                 onBack={() => setActiveStep(2)}
               />
             </main>
           </div>
         )}
 
-        {/* Steps 1 / Quick tabs */}
+        {/* Step 4a: Generating (loading animation) */}
+        {isGenerating && (
+          <div className="flex flex-1 overflow-hidden p-5">
+            <div className="flex-1">
+              <GeneratingQuotationScreen onComplete={() => setQuotationReady(true)} />
+            </div>
+          </div>
+        )}
+
+        {/* Step 4b: Quotation Results */}
+        {isResults && (
+          <div className="flex flex-1 overflow-hidden p-5">
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <QuotationCardsTab
+                onNext={() => setActiveStep(5)}
+                onBack={() => {
+                  setQuotationReady(false);
+                  setActiveStep(3);
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 1 / Quick Measurement tabs */}
         {!isFullscreen && (
           <div className="flex flex-1 overflow-hidden">
             <main className="flex flex-1 flex-col overflow-y-auto">
@@ -87,7 +121,7 @@ export function QuotationGeneration() {
                 <div className="flex">
                   <button
                     data-testid="tab-upload-blueprint"
-                    onClick={() => { setActiveTab("upload"); setActiveStep(1); }}
+                    onClick={() => { setActiveTab("upload"); setActiveStep(1); setQuotationReady(false); }}
                     className={`relative px-8 py-4 text-sm font-semibold transition-colors ${
                       activeTab === "upload" ? "text-[#E07B39]" : "text-gray-500 hover:text-gray-700"
                     }`}
@@ -97,7 +131,7 @@ export function QuotationGeneration() {
                   </button>
                   <button
                     data-testid="tab-quick-measurement"
-                    onClick={() => { setActiveTab("quick"); setActiveStep(1); }}
+                    onClick={() => { setActiveTab("quick"); setActiveStep(1); setQuotationReady(false); }}
                     className={`relative px-8 py-4 text-sm font-semibold transition-colors ${
                       activeTab === "quick" ? "text-[#E07B39]" : "text-gray-500 hover:text-gray-700"
                     }`}
