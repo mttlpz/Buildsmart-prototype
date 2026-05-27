@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { QuotationGeneration } from "@/pages/QuotationGeneration";
+import { PricelistManagement } from "@/pages/PricelistManagement";
 
 function Router() {
   return (
@@ -14,7 +15,7 @@ function Router() {
       <Route path="/blueprints" component={QuotationGeneration} />
       <Route path="/projects" component={QuotationGeneration} />
       <Route path="/quotations" component={QuotationGeneration} />
-      <Route path="/pricelist" component={QuotationGeneration} />
+      <Route path="/pricelist" component={PricelistManagement} />
       <Route path="/suppliers" component={QuotationGeneration} />
       <Route path="/management" component={QuotationGeneration} />
       <Route path="/settings" component={QuotationGeneration} />
