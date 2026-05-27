@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Upload, Layers } from "lucide-react";
+import { ChevronDown, Upload } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ProgressStepper } from "@/components/layout/ProgressStepper";
 import { UploadBlueprintTab } from "@/components/quotation/UploadBlueprintTab";
@@ -20,9 +20,10 @@ const uploadSteps = [
 ];
 
 const quickSteps = [
-  { number: 1, label: "Quick Measurement & Assign Scope" },
-  { number: 2, label: "Generate Quotation" },
-  { number: 3, label: "Review & Finalize" },
+  { number: 1, label: "Quick Measurement" },
+  { number: 2, label: "Assign Scope" },
+  { number: 3, label: "Generate Quotation" },
+  { number: 4, label: "Review & Finalize" },
 ];
 
 export function QuotationGeneration() {
@@ -32,15 +33,41 @@ export function QuotationGeneration() {
 
   const steps = activeTab === "upload" ? uploadSteps : quickSteps;
 
-  const isReviewing   = activeTab === "upload" && activeStep === 2;
-  const isAssignScope = activeTab === "upload" && activeStep === 3;
-  const isGenerating  = activeTab === "upload" && activeStep === 4 && !quotationReady;
-  const isResults     = activeTab === "upload" && activeStep === 4 && quotationReady;
-  const isFullscreen  = isReviewing || isAssignScope || isGenerating || isResults;
+  // ── Upload path ──────────────────────────────────────────
+  const isUploadReview   = activeTab === "upload" && activeStep === 2;
+  const isUploadScope    = activeTab === "upload" && activeStep === 3;
+  const isUploadGen      = activeTab === "upload" && activeStep === 4 && !quotationReady;
+  const isUploadResults  = activeTab === "upload" && activeStep === 4 && quotationReady;
+
+  // ── Quick path ───────────────────────────────────────────
+  const isQuickScope     = activeTab === "quick"  && activeStep === 2;
+  const isQuickGen       = activeTab === "quick"  && activeStep === 3 && !quotationReady;
+  const isQuickResults   = activeTab === "quick"  && activeStep === 3 && quotationReady;
+
+  // fullscreen hides the main tab-picker shell
+  const isFullscreen = isUploadReview || isUploadScope || isUploadGen || isUploadResults
+                     || isQuickScope  || isQuickGen    || isQuickResults;
 
   const handleGenerateQuotation = () => {
     setQuotationReady(false);
-    setActiveStep(4);
+    setActiveStep(activeTab === "upload" ? 4 : 3);
+  };
+
+  const handleStructuralRevision = () => {
+    setQuotationReady(false);
+    if (activeTab === "upload") {
+      // Go back to Review Segments in reclassify mode
+      setActiveStep(2);
+    } else {
+      // Go back to Quick Measurement (step 1)
+      setActiveStep(1);
+    }
+  };
+
+  const switchTab = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    setActiveStep(1);
+    setQuotationReady(false);
   };
 
   return (
@@ -65,8 +92,8 @@ export function QuotationGeneration() {
           </div>
         </header>
 
-        {/* Step 2: Review Segments */}
-        {isReviewing && (
+        {/* ═══ UPLOAD: Step 2 — Review Segments ═══ */}
+        {isUploadReview && (
           <div className="flex flex-1 overflow-hidden">
             <main className="flex flex-1 flex-col overflow-hidden p-5">
               <ReviewSegmentsTab
@@ -77,20 +104,20 @@ export function QuotationGeneration() {
           </div>
         )}
 
-        {/* Step 3: Assign Scope */}
-        {isAssignScope && (
+        {/* ═══ UPLOAD: Step 3 / QUICK: Step 2 — Assign Scope ═══ */}
+        {(isUploadScope || isQuickScope) && (
           <div className="flex flex-1 overflow-hidden">
             <main className="flex flex-1 flex-col overflow-hidden p-5">
               <AssignScopeTab
                 onNext={handleGenerateQuotation}
-                onBack={() => setActiveStep(2)}
+                onBack={() => setActiveStep(activeTab === "upload" ? 2 : 1)}
               />
             </main>
           </div>
         )}
 
-        {/* Step 4a: Generating (loading animation) */}
-        {isGenerating && (
+        {/* ═══ UPLOAD: Step 4a / QUICK: Step 3a — Generating (loading) ═══ */}
+        {(isUploadGen || isQuickGen) && (
           <div className="flex flex-1 overflow-hidden p-5">
             <div className="flex-1">
               <GeneratingQuotationScreen onComplete={() => setQuotationReady(true)} />
@@ -98,30 +125,32 @@ export function QuotationGeneration() {
           </div>
         )}
 
-        {/* Step 4b: Quotation Results */}
-        {isResults && (
+        {/* ═══ UPLOAD: Step 4b / QUICK: Step 3b — Quotation Results ═══ */}
+        {(isUploadResults || isQuickResults) && (
           <div className="flex flex-1 overflow-hidden p-5">
             <div className="flex flex-1 flex-col overflow-hidden">
               <QuotationCardsTab
-                onNext={() => setActiveStep(5)}
+                onNext={() => setActiveStep(activeTab === "upload" ? 5 : 4)}
                 onBack={() => {
                   setQuotationReady(false);
-                  setActiveStep(3);
+                  setActiveStep(activeTab === "upload" ? 3 : 2);
                 }}
+                onStructuralRevision={handleStructuralRevision}
               />
             </div>
           </div>
         )}
 
-        {/* Step 1 / Quick Measurement tabs */}
+        {/* ═══ Step 1 — Tab picker + content (Upload or Quick) ═══ */}
         {!isFullscreen && (
           <div className="flex flex-1 overflow-hidden">
-            <main className="flex flex-1 flex-col overflow-y-auto">
-              <div className="border-b border-gray-200 bg-white">
+            <main className="flex flex-1 flex-col overflow-hidden">
+              {/* Tab switcher */}
+              <div className="border-b border-gray-200 bg-white flex-shrink-0">
                 <div className="flex">
                   <button
                     data-testid="tab-upload-blueprint"
-                    onClick={() => { setActiveTab("upload"); setActiveStep(1); setQuotationReady(false); }}
+                    onClick={() => switchTab("upload")}
                     className={`relative px-8 py-4 text-sm font-semibold transition-colors ${
                       activeTab === "upload" ? "text-[#E07B39]" : "text-gray-500 hover:text-gray-700"
                     }`}
@@ -131,7 +160,7 @@ export function QuotationGeneration() {
                   </button>
                   <button
                     data-testid="tab-quick-measurement"
-                    onClick={() => { setActiveTab("quick"); setActiveStep(1); setQuotationReady(false); }}
+                    onClick={() => switchTab("quick")}
                     className={`relative px-8 py-4 text-sm font-semibold transition-colors ${
                       activeTab === "quick" ? "text-[#E07B39]" : "text-gray-500 hover:text-gray-700"
                     }`}
@@ -142,36 +171,32 @@ export function QuotationGeneration() {
                 </div>
               </div>
 
-              <div className="flex-1 p-5">
-                {activeTab === "upload" ? (
-                  <UploadBlueprintTab onBeginSegmentation={() => setActiveStep(2)} />
-                ) : (
-                  <QuickMeasurementTab onConfirm={() => setActiveStep(2)} />
-                )}
-              </div>
-            </main>
-
-            <aside className="w-52 flex-shrink-0 border-l border-gray-200 bg-white p-3">
-              {activeTab === "upload" ? (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                    <Upload className="h-4 w-4" /> Upload Session
-                  </h3>
-                  <div className="rounded border border-dashed border-gray-200 py-8 text-center text-xs text-gray-400">
-                    No uploads yet
+              {/* Upload Blueprint tab */}
+              {activeTab === "upload" && (
+                <div className="flex flex-1 overflow-hidden">
+                  <div className="flex-1 overflow-y-auto p-5">
+                    <UploadBlueprintTab onBeginSegmentation={() => setActiveStep(2)} />
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                    <Layers className="h-4 w-4" /> Group Segments
-                  </h3>
-                  <div className="rounded border border-dashed border-gray-200 py-8 text-center text-xs text-gray-400">
-                    No groups yet
-                  </div>
+                  <aside className="w-52 flex-shrink-0 border-l border-gray-200 bg-white p-3">
+                    <div>
+                      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                        <Upload className="h-4 w-4" /> Upload Session
+                      </h3>
+                      <div className="rounded border border-dashed border-gray-200 py-8 text-center text-xs text-gray-400">
+                        No uploads yet
+                      </div>
+                    </div>
+                  </aside>
                 </div>
               )}
-            </aside>
+
+              {/* Quick Measurement tab — full width, right panel built-in */}
+              {activeTab === "quick" && (
+                <div className="flex flex-1 overflow-hidden p-5">
+                  <QuickMeasurementTab onConfirm={() => setActiveStep(2)} />
+                </div>
+              )}
+            </main>
           </div>
         )}
       </div>
