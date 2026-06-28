@@ -1,0 +1,84 @@
+Context: You're continuing work on an existing Replit project (this exact 
+repo — not a new one). The current state has TWO real screens 
+(QuotationGeneration, PricelistManagement) and 8 placeholder routes that all 
+alias to QuotationGeneration. There is a SEPARATE Replit project (different 
+account) that has a CompanyPreferences mockup, fully styled, with 5 working 
+tabs (Material Preference Rules, Scope Templates, Labor Rates, Pricing 
+Strategies, Unit Conversions) using static mock data — no backend wiring.
+
+Your job: pull the CompanyPreferences UI/UX pattern (tab structure, card 
+layout, the "Configured rules" list + "Rule details" panel split shown in 
+its screenshots) and rebuild it using THIS project's existing component 
+library, theme tokens, and Tailwind config — do not import its components 
+wholesale, since it's a different shadcn install and the visual styles will 
+clash. Match THIS project's current look.
+
+Build order — follow the attached Main Activity Diagram (image 3) exactly 
+for the login → setup-gate → dashboard flow. Specifically:
+
+1. Login → authenticate → load company profile → check setup completion.
+2. If setup incomplete (new account): fork into Company Preferences AND 
+   Pricelist Management as a PARALLEL gate — both must be completed before 
+   the dashboard and all other modules become accessible. 
+   [FLAG FOR HUMAN REVIEW: the diagram shows these as parallel, but the 
+   product owner described pricelist-before-rules as sequential in writing. 
+   Build the diagram's parallel-fork version as the default; this is the 
+   one place in this prompt where the source diagram and the written 
+   instruction disagree, and it needs a decision before this part ships.]
+3. Once setup is complete, dashboard exposes: Manage Account, Company 
+   Preferences, Pricelist, Quotation Generation, Open Projects, Analyze 
+   Market Intelligence, Benchmark Suppliers, Log out — matching image 3's 
+   "Select main function" fork exactly, as real distinct routes, not 
+   aliases to one component.
+
+Company Rules and Preferences module — build all 6 tabs per image 2's 
+swimlane (note: this is a SEPARATE top-level "Configure Supplier Rules" 
+branch, not nested inside Material Rules):
+- Material Preference Rules (existing pattern from the referenced mockup)
+- Scope Templates
+- Labor Rates — region-aware (NCR, CALABARZON, etc.), trade-based, with 
+  productivity index input
+- Pricing Strategies — Practical / Standard / Premium tiers
+- Unit Conversions — include wastage allowance % per material category
+- Supplier Discount Rules (NEW tab, currently doesn't exist anywhere) — 
+  rule_type values must be exactly: 'Bulk discount', 'Negotiated price', 
+  'Minimum order', 'Preferred supplier' (match the DB enum casing exactly, 
+  not the diagram's "Negotiated Discount" label). Minimum order rules can 
+  produce a hard exclusion (supplier unavailable below threshold), not 
+  just a discount — model that as a real branch, not a flat percentage.
+
+Pricelist Management — expand significantly past current state to match 
+image 1's full flow: dual entry (upload CSV/XLSX/PDF internal pricelist, 
+OR fetch from published DPWH/PSA source), missing-field prompting, 
+normalize → map → preview → approve/reject before committing to 
+Price_Record, a significant-deviation check (>15% swing) that flags for 
+review rather than auto-saving, and a source-priority reordering screen.
+
+Quotation Generation — mostly preserve current build, but correct the 
+pricing pipeline order to: fetch base price → apply supplier discount 
+rules → apply pricing strategy markup → apply unit conversion/wastage on 
+quantity (parallel) → apply labor rules on service cost (parallel) → 
+combine into grand total. Do NOT apply discounts before a price exists to 
+discount — discount math needs a fetched price as input.
+
+Projects module (new, not yet built) — a Project record is created ONLY 
+as the output of a saved Quotation Generation flow, never created 
+directly. The Projects list shows generated quotations the user has 
+saved; from there the user can re-edit a saved quotation, or archive it 
+(e.g. when a client declines). Don't build a separate "create project" 
+entry point — there isn't one.
+
+Analyze Market Intelligence (new) — keep this intentionally simple for 
+v1: line graphs only, showing price movement per material across 
+quarters (Q1-Q4), pulled from Historical_Price_Record. No predictive 
+forecasting — AI Insights here means short interpretive text summaries 
+("Steel prices increased 12% over the last two quarters"), not a 
+prediction model. Don't build supplier benchmarking or regional 
+comparison into this screen yet — Benchmark Suppliers is a separate 
+dashboard per image 3.
+
+Reference the attached pasted objective document for the full reasoning 
+behind why AMI sits downstream of Pricelist Management rather than inside 
+the quotation computation chain — Quotation Generation may READ market 
+insights for the estimator to see, but the insight generation itself is 
+not part of the price calculation.

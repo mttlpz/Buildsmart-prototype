@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { ChevronDown, Upload, Link2, Search, RefreshCw, CheckCircle2, AlertTriangle, Info, ChevronRight, ChevronLeft, FileSpreadsheet, Check, X, ArrowRight, Eye, Download, Tag, Zap, Database } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ProgressStepper } from "@/components/layout/ProgressStepper";
+import { useApp } from "@/context/AppContext";
 
 const PRICELIST_STEPS = [
   { number: 1, label: "Upload File" },
@@ -460,10 +461,15 @@ function MapConfirmStep({ source, onBack, onDone }: { source: "upload" | "fetch"
   const rows = source === "fetch" ? DPWH_ROWS : SAMPLE_ROWS;
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState(false);
+  const { onboardingStep, advanceOnboarding } = useApp();
 
   const handleConfirm = () => {
     setConfirming(true);
-    setTimeout(() => { setConfirming(false); setDone(true); }, 2000);
+    setTimeout(() => {
+      setConfirming(false);
+      setDone(true);
+      if (onboardingStep < 1) advanceOnboarding(1);
+    }, 2000);
   };
 
   const categories = [...new Set((rows as any[]).map(r => r.category || "Waterproofing"))];

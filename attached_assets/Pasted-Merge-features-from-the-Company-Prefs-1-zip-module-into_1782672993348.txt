@@ -1,0 +1,38 @@
+Merge features from the Company-Prefs (1).zip module into the main prototype, enforce a unified UI/UX theme, and completely overhaul the application state logic to match the Main Activity Diagram onboarding flow.
+
+🛠️ Step 1: Codebase Merging & UI Unification
+Target Design System: Treat the UI layout, Tailwind/CSS variables, color palette, typography, and component styling of the Main Prototype (Initial ZIP) as the absolute source of truth.
+
+Feature Extraction: Extract the functional backend logic, API endpoints, and data models for the Company Rules and Management Preference (CPRM) module from the secondary archive named Company-Prefs (1).zip.
+
+UI Adaptation: Seamlessly inject the CPRM feature into the Main Prototype's layout. Do not import CSS or styling files from Company-Prefs (1).zip; instead, rewrite the CPRM frontend components using the existing design elements, buttons, cards, and input fields of the Main Prototype.
+
+🔄 Step 2: Main Workflow & Onboarding State Machine
+Revise the global routing, middleware, and application state logic to strictly adhere to the BUILDSMART-MAIN AD workflow. Implement a multi-step user onboarding gate:
+
+[Login] ➡️ [Check Account Status] ➡️ [Is New?]
+                                        ⬇️ (Yes)
+                             [Lock Global Navigation]
+                                        ⬇
+                           [Step 1: Upload Pricelist]
+                                        ⬇
+                          [Step 2: Upload Company Rules]
+                                        ⬇
+                             [Unlock All Features]
+📋 Technical Guardrails for the Flow:
+Account Status Check: Upon successful user authentication, the system must query the database to check if a valid Pricelist and Company Rules are associated with the user/organization.
+
+Navigation Interception / Route Guarding: If either asset is missing, intercept all standard dashboard routes. Prevent the user from manually navigating to analysis features, historical records, or quotation validators via the URL or navigation bar.
+
+Sequential Setup Onboarding:
+
+Onboarding Step 1: Force redirect the user to a dedicated Pricelist Upload Screen. Once a valid pricelist is successfully uploaded and parsed into the database, proceed to Step 2.
+
+Onboarding Step 2: Automatically advance the user to the Company Rules and Preferences Setup Screen.
+
+System Activation: Only when both initialization steps are verified as complete should the account status flip to "Active/Established," unlocking the full suite of sidebar tools, main navigation, and the primary dashboard layout.
+
+🧪 Step 3: Verification & Integrity
+Maintain database integrity while connecting the user schemas, ensuring the uploaded pricelists and company rules map correctly to the active user session.
+
+Preserve all existing Gemini API integrations in the background while updating this core structure.

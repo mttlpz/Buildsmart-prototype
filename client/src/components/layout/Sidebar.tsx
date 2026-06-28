@@ -1,22 +1,58 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, FileText, FolderOpen, FileSpreadsheet, Tag, Truck, Users, Settings } from "lucide-react";
+import { LayoutDashboard, FileText, FolderOpen, FileSpreadsheet, Tag, Truck, Users, Settings, Lock, TrendingUp } from "lucide-react";
+import { useApp } from "@/context/AppContext";
 
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/quotation" },
-  { label: "Blueprints", icon: FileText, href: "/blueprints" },
-  { label: "Projects", icon: FolderOpen, href: "/projects" },
-  { label: "Quotations", icon: FileSpreadsheet, href: "/quotations" },
+const NAV_ITEMS = [
+  { label: "Dashboard",     icon: LayoutDashboard, href: "/dashboard",  minStep: 2 },
+  { label: "Blueprints",    icon: FileText,         href: "/blueprints", minStep: 2 },
+  { label: "Projects",      icon: FolderOpen,       href: "/projects",   minStep: 2 },
+  { label: "Quotations",    icon: FileSpreadsheet,  href: "/quotations", minStep: 2 },
 ];
 
-const settingsItems = [
-  { label: "Pricelist", icon: Tag, href: "/pricelist" },
-  { label: "Suppliers", icon: Truck, href: "/suppliers" },
-  { label: "Management", icon: Users, href: "/management" },
-  { label: "Settings", icon: Settings, href: "/settings" },
+const SETTINGS_ITEMS = [
+  { label: "Pricelist",   icon: Tag,        href: "/pricelist",   minStep: 0 },
+  { label: "Management",  icon: Users,      href: "/management",  minStep: 1 },
+  { label: "Market Intel",icon: TrendingUp, href: "/analysis",    minStep: 2 },
+  { label: "Suppliers",   icon: Truck,      href: "/suppliers",   minStep: 2 },
+  { label: "Settings",    icon: Settings,   href: "/settings",    minStep: 2 },
 ];
+
+function NavItem({ item, onboardingStep }: { item: typeof NAV_ITEMS[0]; onboardingStep: number }) {
+  const [location] = useLocation();
+  const Icon = item.icon;
+  const active = location === item.href || (item.href === "/dashboard" && location === "/");
+  const locked = onboardingStep < item.minStep;
+
+  if (locked) {
+    return (
+      <div
+        className="flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium text-gray-300 cursor-not-allowed select-none"
+        title={`Complete setup to unlock ${item.label}`}
+      >
+        <Lock className="h-4 w-4 flex-shrink-0" />
+        <span>{item.label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={item.href}
+      data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+      className={`flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+        active
+          ? "bg-[#E07B39] text-white"
+          : "text-gray-600 hover:bg-orange-50 hover:text-[#E07B39]"
+      }`}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <span>{item.label}</span>
+    </Link>
+  );
+}
 
 export function Sidebar() {
-  const [location] = useLocation();
+  const { onboardingStep } = useApp();
 
   return (
     <aside className="flex h-screen w-[160px] flex-shrink-0 flex-col bg-white shadow-[2px_0_8px_rgba(0,0,0,0.08)]">
@@ -24,51 +60,36 @@ export function Sidebar() {
         <img src="/figmaAssets/logo.svg" alt="BuildSmart" className="h-8 w-auto" />
       </div>
 
+      {/* Onboarding progress */}
+      {onboardingStep < 2 && (
+        <div className="mx-2 mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-amber-600">Setup {onboardingStep}/2</p>
+          <div className="mt-1 flex gap-1">
+            <div className={`h-1 flex-1 rounded-full ${onboardingStep >= 1 ? "bg-amber-500" : "bg-amber-200"}`} />
+            <div className={`h-1 flex-1 rounded-full ${onboardingStep >= 2 ? "bg-amber-500" : "bg-amber-200"}`} />
+          </div>
+        </div>
+      )}
+
       <nav className="flex flex-1 flex-col gap-0.5 px-2 py-3">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = location === item.href || (item.href === "/quotation" && location === "/");
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              data-testid={`nav-${item.label.toLowerCase()}`}
-              className={`flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-[#E07B39] text-white"
-                  : "text-gray-600 hover:bg-orange-50 hover:text-[#E07B39]"
-              }`}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {NAV_ITEMS.map(item => (
+          <NavItem key={item.href} item={item} onboardingStep={onboardingStep} />
+        ))}
 
         <div className="mt-4 px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
           Settings
         </div>
 
-        {settingsItems.map((item) => {
-          const Icon = item.icon;
-          const active = location === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              data-testid={`nav-${item.label.toLowerCase()}`}
-              className={`flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-[#E07B39] text-white"
-                  : "text-gray-600 hover:bg-orange-50 hover:text-[#E07B39]"
-              }`}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+        {SETTINGS_ITEMS.map(item => (
+          <NavItem key={item.href} item={item} onboardingStep={onboardingStep} />
+        ))}
       </nav>
+
+      {onboardingStep >= 2 && (
+        <div className="mx-2 mb-3 rounded-lg border border-green-200 bg-green-50 p-2 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-green-600">✓ Account Active</p>
+        </div>
+      )}
     </aside>
   );
 }

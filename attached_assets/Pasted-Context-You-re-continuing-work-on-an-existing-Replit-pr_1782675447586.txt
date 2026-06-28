@@ -1,0 +1,180 @@
+Context: You're continuing work on an existing Replit project (this exact 
+repo — not a new one). Current state: two real, built screens 
+(QuotationGeneration, PricelistManagement) plus 8 placeholder routes that 
+all alias to QuotationGeneration. There is a SEPARATE Replit project 
+(different account, attached as Company-Prefs.zip) containing a 
+CompanyPreferences UI mockup — 5 tabs, fully styled, static mock data only.
+That separate project's backend (lib/db schema, OpenAPI spec) is 
+effectively empty — a placeholder schema and a health-check endpoint, 
+nothing real. Do not try to extract backend logic or API endpoints from it,
+because there isn't any to extract. What's actually usable from it is the
+UI/UX structure: the tab layout, the "Configured rules" list + "Rule 
+details" panel split, and the shape of its static mock data as a guide for
+what fields each tab needs — nothing more.
+
+=====================================================================
+STEP 1 — Codebase merge & UI unification
+=====================================================================
+
+Target design system: the Main Prototype (this repo, the initial ZIP) is 
+the absolute source of truth for layout, Tailwind/CSS variables, color 
+palette, typography, and component styling.
+
+Do NOT import any CSS, theme tokens, or component files from 
+Company-Prefs.zip. Rewrite the CPRM frontend entirely using this repo's 
+existing buttons, cards, inputs, and layout primitives. The CPRM mockup 
+is a reference for structure and UX flow only, not for styling or code.
+
+=====================================================================
+STEP 2 — Main workflow & onboarding state machine
+=====================================================================
+
+Revise global routing, middleware, and app state to strictly follow the 
+attached BUILDSMART-MAIN AD diagram, with this exact sequential gate 
+(this supersedes any "parallel fork" reading of the diagram — sequential 
+is the buildable version):
+
+[Login] → [Check Account Status] → [Is New?]
+                                        ↓ (Yes)
+                          [Lock Global Navigation]
+                                        ↓
+                       [Step 1: Upload Pricelist]
+                                        ↓ (success → parsed into DB)
+                    [Step 2: Company Rules & Preferences Setup]
+                                        ↓ (success)
+                            [Unlock All Features]
+
+Technical guardrails:
+- On successful auth, query whether a valid Pricelist AND valid Company 
+  Rules already exist for this user/organization.
+- Route guarding: if either is missing, intercept ALL standard dashboard 
+  routes — block direct URL/nav-bar access to analysis features, 
+  historical records, quotation generation, projects, everything except 
+  the active setup step.
+- Step 1 (Pricelist Upload) must fully complete and parse into the DB 
+  before Step 2 becomes reachable — Step 2 is not accessible by skipping 
+  ahead.
+- Step 2 (Company Rules Setup) completing flips account status to 
+  "Active/Established," which unlocks the full sidebar, main nav, and 
+  dashboard.
+- Once setup is complete, the dashboard's "Select main function" fork 
+  exposes real distinct routes (per the Main AD): Manage Account, 
+  Company Preferences, Pricelist, Quotation Generation, Open Projects, 
+  Analyze Market Intelligence, Benchmark Suppliers, Log out. These must 
+  be actual separate pages, not aliases to one component the way 8 of 
+  the current 10 routes are today.
+
+=====================================================================
+STEP 3 — Company Rules and Preferences module (build out, not just style)
+=====================================================================
+
+Build all 6 tabs as a single page with tabs (not 6 separate top-level 
+routes), matching the CPRM activity diagram's swimlane structure:
+
+1. Material Preference Rules
+2. Scope Templates
+3. Labor Rates — region-aware (NCR, CALABARZON, etc.), trade-based 
+   (Mason, Carpenter, Electrician, Plumber), with productivity index 
+   input
+4. Pricing Strategies — Practical / Standard / Premium tiers, each 
+   configuring its own markup %, default price-source priority, fallback 
+   rule, and warranty/payment terms
+5. Unit Conversions — material category → conversion factor, plus a 
+   wastage allowance % per material category
+6. Supplier Discount Rules (NEW — doesn't exist yet anywhere). rule_type 
+   values must be exactly: 'Bulk discount', 'Negotiated price', 
+   'Minimum order', 'Preferred supplier' — match this casing exactly, it 
+   maps directly to a DB CHECK constraint. Minimum order rules can 
+   produce a hard exclusion (supplier unavailable below threshold), not 
+   just a discount percentage — model that as a real branch in the logic, 
+   not a flat discount calculation.
+
+Disable/dependency-check logic (already correct in the existing CPRM 
+diagram) must extend to the new Supplier Discount Rules tab too: a rule 
+referenced in an active/existing quotation cannot be disabled without a 
+warning.
+
+=====================================================================
+STEP 4 — Pricelist Management (expand past current state)
+=====================================================================
+
+Current build is a good draft but incomplete. Expand to match the full 
+attached flow:
+- Dual entry: upload CSV/XLSX/PDF (internal supplier pricelist) OR fetch 
+  from a published source (DPWH/PSA)
+- Missing-field detection → prompt user to fill/map before proceeding
+- Normalize → map materials/suppliers to catalog → assign source type 
+  and region → preview extracted records
+- Approve/reject preview before committing to Price_Record
+- Significant-deviation check (>15% swing vs. previous version) → flag 
+  for review rather than auto-saving; user approves or rejects the 
+  update
+- Source-priority reordering screen (drag-to-reorder: Uploaded pricelist 
+  / Supplier price / Government DPWH-CMWPI)
+- View Price Trends screen: filter by region, load historical 
+  Price_Record data, generate the trend graphs that feed Analyze Market 
+  Intelligence (see Step 6)
+
+=====================================================================
+STEP 5 — Quotation Generation (preserve, fix pricing order)
+=====================================================================
+
+Mostly preserve the current build. Correct the pricing pipeline to this 
+exact order — this is a real logic fix, not a style choice, since 
+discount math needs a price to discount:
+
+  Fetch base price (by region/source priority)
+        ↓
+  Apply Supplier Discount Rules (requires a price to evaluate 
+  minimum_order_amount/discount_percentage against — never apply before 
+  fetch)
+        ↓
+  Apply Pricing Strategy markup %
+        ↓
+  [parallel] Apply Unit Conversion + wastage % to quantity
+  [parallel] Apply Labor Rules to service cost (region + trade)
+        ↓
+  Combine into grand total
+
+Retrieve Market Insights stays a read-only side panel the estimator can 
+consult during this flow — it is NOT part of the price calculation chain 
+itself.
+
+=====================================================================
+STEP 6 — Projects module (new)
+=====================================================================
+
+A Project record is created ONLY as the output of a saved Quotation 
+Generation flow — there is no standalone "create project" entry point. 
+From the Projects list, the user can re-open and edit a saved quotation, 
+or archive it (e.g. client declined). Build it as: list of generated 
+quotations → open/edit → archive, nothing more for v1.
+
+=====================================================================
+STEP 7 — Analyze Market Intelligence (new, keep simple)
+=====================================================================
+
+v1 scope is intentionally narrow: line graphs showing price movement per 
+material across quarters (Q1–Q4), sourced from Historical_Price_Record. 
+Pair each graph with a short interpretive AI Insight text summary (e.g. 
+"Steel prices increased 12% over the last two quarters") — this is 
+NOT a forecasting/prediction model, just a plain-language read of the 
+historical trend already computed. Do not build supplier benchmarking or 
+regional comparison into this screen — Benchmark Suppliers is its own 
+separate dashboard per the Main AD, out of scope for this pass.
+
+=====================================================================
+STEP 8 — Verification & integrity
+=====================================================================
+
+- Maintain database integrity connecting user schemas to uploaded 
+  pricelists and company rules — both must map correctly to the active 
+  user session, since the onboarding gate in Step 2 depends on querying 
+  this per-user/per-org.
+- Preserve all existing Gemini API integrations as-is while restructuring 
+  routing/state around them.
+- Reference the attached pasted objective document for the full reasoning 
+  on why Analyze Market Intelligence sits downstream of Pricelist 
+  Management rather than inside the quotation computation chain — 
+  Quotation Generation reads market insights for the estimator to see; 
+  insight generation is not part of the price calculation itself.
