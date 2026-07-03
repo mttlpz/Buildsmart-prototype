@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AppProvider, useApp } from "@/context/AppContext";
 import NotFound from "@/pages/not-found";
 import { QuotationGeneration } from "@/pages/QuotationGeneration";
@@ -11,51 +12,131 @@ import { CompanyPreferences } from "@/pages/CompanyPreferences";
 import { Projects } from "@/pages/Projects";
 import { MarketIntelligence } from "@/pages/MarketIntelligence";
 import { Dashboard } from "@/pages/Dashboard";
+import { Login } from "@/pages/Login";
+import { SignUp } from "@/pages/SignUp";
+import { SupplierBenchmarking } from "@/pages/SupplierBenchmarking";
 
-// Route guard: redirect to appropriate onboarding step if not fully setup
+// Guard: require completed onboarding for full features
 function GuardedRoute({ component: Component, minStep = 2 }: { component: React.ComponentType; minStep?: number }) {
   const { onboardingStep } = useApp();
-
   if (onboardingStep < minStep) {
     if (onboardingStep === 0) return <Redirect to="/pricelist" />;
     if (onboardingStep === 1) return <Redirect to="/management" />;
   }
-
   return <Component />;
+}
+
+// Guard: require auth session — redirect unauthenticated visitors to /login
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const [location] = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50" style={{ fontFamily: "'Poppins', sans-serif" }}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-[#E07B39]" />
+          <p className="text-sm text-gray-400 font-medium">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  return <>{children}</>;
 }
 
 function Router() {
   return (
     <Switch>
-      {/* Root + dashboard */}
-      <Route path="/" component={Dashboard} />
-      <Route path="/dashboard" component={Dashboard} />
+      {/* Public auth routes */}
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={SignUp} />
 
-      {/* Onboarding steps — always accessible */}
-      <Route path="/pricelist" component={PricelistManagement} />
-      <Route path="/management" component={CompanyPreferences} />
+      {/* Root redirect */}
+      <Route path="/">
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={Dashboard} minStep={2} />
+          </RequireAuth>
+        )}
+      </Route>
 
-      {/* Full features — guarded until onboarding complete */}
+      {/* Onboarding */}
+      <Route path="/pricelist">
+        {() => (
+          <RequireAuth>
+            <PricelistManagement />
+          </RequireAuth>
+        )}
+      </Route>
+      <Route path="/management">
+        {() => (
+          <RequireAuth>
+            <CompanyPreferences />
+          </RequireAuth>
+        )}
+      </Route>
+
+      {/* Main app routes — guarded */}
+      <Route path="/dashboard">
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={Dashboard} minStep={2} />
+          </RequireAuth>
+        )}
+      </Route>
       <Route path="/quotation">
-        {() => <GuardedRoute component={QuotationGeneration} />}
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={QuotationGeneration} />
+          </RequireAuth>
+        )}
       </Route>
       <Route path="/projects">
-        {() => <GuardedRoute component={Projects} />}
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={Projects} />
+          </RequireAuth>
+        )}
       </Route>
       <Route path="/analysis">
-        {() => <GuardedRoute component={MarketIntelligence} />}
-      </Route>
-      <Route path="/blueprints">
-        {() => <GuardedRoute component={QuotationGeneration} />}
-      </Route>
-      <Route path="/quotations">
-        {() => <GuardedRoute component={Projects} />}
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={MarketIntelligence} />
+          </RequireAuth>
+        )}
       </Route>
       <Route path="/suppliers">
-        {() => <GuardedRoute component={Dashboard} />}
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={SupplierBenchmarking} />
+          </RequireAuth>
+        )}
+      </Route>
+      <Route path="/blueprints">
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={QuotationGeneration} />
+          </RequireAuth>
+        )}
+      </Route>
+      <Route path="/quotations">
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={Projects} />
+          </RequireAuth>
+        )}
       </Route>
       <Route path="/settings">
-        {() => <GuardedRoute component={Dashboard} />}
+        {() => (
+          <RequireAuth>
+            <GuardedRoute component={Dashboard} />
+          </RequireAuth>
+        )}
       </Route>
 
       <Route component={NotFound} />
@@ -67,10 +148,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppProvider>
-          <Toaster />
-          <Router />
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <Toaster />
+            <Router />
+          </AppProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

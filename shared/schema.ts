@@ -7,6 +7,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
+  email: text("email").unique(),
   password: text("password").notNull(),
   companyId: varchar("company_id"),
   onboardingStep: integer("onboarding_step").notNull().default(0),
@@ -19,6 +20,12 @@ export const companies = pgTable("companies", {
   name: text("name").notNull(),
   region: text("region").notNull().default("NCR"),
   specialization: text("specialization").array().notNull().default(sql`'{}'::text[]`),
+  companyAddress: text("company_address").notNull().default(""),
+  contactNumber: text("contact_number").notNull().default(""),
+  companyLogo: text("company_logo"),
+  city: text("city").notNull().default(""),
+  projectSector: text("project_sector").array(),
+  companyRole: text("company_role"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -120,7 +127,6 @@ export const unitConversions = pgTable("unit_conversions", {
 });
 
 // ─── Supplier Discount Rules ──────────────────────────────────────────────────
-// ruleType CHECK: 'Bulk discount' | 'Negotiated price' | 'Minimum order' | 'Preferred supplier'
 export const supplierDiscountRules = pgTable("supplier_discount_rules", {
   id: serial("id").primaryKey(),
   companyId: varchar("company_id").notNull(),
@@ -153,7 +159,7 @@ export const quotations = pgTable("quotations", {
 });
 
 // ─── Insert Schemas ───────────────────────────────────────────────────────────
-export const insertUserSchema = createInsertSchema(users).pick({ username: true, password: true });
+export const insertUserSchema = createInsertSchema(users).pick({ username: true, password: true, email: true });
 export const insertCompanySchema = createInsertSchema(companies).omit({ id: true, createdAt: true });
 export const insertPriceRecordSchema = createInsertSchema(priceRecords).omit({ id: true, createdAt: true });
 export const insertHistoricalPriceRecordSchema = createInsertSchema(historicalPriceRecords).omit({ id: true, recordedAt: true });

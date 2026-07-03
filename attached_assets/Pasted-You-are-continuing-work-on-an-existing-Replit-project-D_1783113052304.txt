@@ -1,0 +1,347 @@
+You are continuing work on an existing Replit project.
+Do NOT create a new project. Read the existing codebase 
+before changing anything.
+
+The existing design system (Tailwind config, CSS variables, 
+orange accent color, card styles, button variants, sidebar 
+layout) is the absolute source of truth. Every new page 
+must match the existing visual theme exactly.
+
+=====================================================================
+PRELIMINARY — Update the database schema first
+Before building any UI, update shared/schema.ts companies 
+table to add the missing columns. The current schema is 
+missing fields that the signup form needs to save:
+
+  company_address: text("company_address").notNull().default("")
+  contact_number:  text("contact_number").notNull().default("")
+  company_logo:    text("company_logo")              -- nullable, stores URL/path
+  city:            text("city").notNull().default("")
+  project_sector:  text("project_sector").array()    -- e.g. ["Residential","Commercial"]
+  company_role:    text("company_role")              -- nullable
+
+Also add to users table:
+  email: text("email").unique()   -- separate from username; 
+                                     username stays as login key
+
+Run the migration after updating the schema so the DB 
+columns actually exist before any routes try to write them.
+
+=====================================================================
+FIX 1 — Animated BuildSmart cube (left-side visual on auth pages)
+=====================================================================
+
+Create client/src/components/BuildSmartCube.tsx.
+
+This component renders an isometric cube made of 48 
+individual brick cells, matching the rounded-rectangle 
+brick pattern in the BuildSmart logo (the orange cube 
+visible in the uploaded Figma screenshots). The cube has 
+three visible faces arranged isometrically — do not render 
+it as a flat square grid.
+
+Cell states:
+- Unfilled: full orange color but opacity 10%
+- Filled: full orange color, opacity 100%, with a short 
+  fade-in transition (150ms ease-in) when it activates
+
+The component accepts a prop: filledCells: string[] (an 
+array of cell IDs). Any cell whose ID is in that array 
+renders at full opacity.
+
+Assign cells using this exact mapping so the cube fills 
+visually from top-left to bottom-right as the user 
+progresses:
+
+Step 1 — Company Info:
+  Logo uploaded:        cells A1 A2 B1 B2
+  Company Name:         cells A3 A4 B3
+  Office Phone Number:  cells A5 A6 B4
+  Company Address:      cells B5 B6 C1 C2
+  City/Municipality:    cells C3 C4
+  Province/Region:      cells C5 C6
+
+Step 2 — Contact & Access:
+  Email Address:        cells D1 D2 D3
+  Password valid:       cells D4 D5
+  Passwords match:      cells D6 E1
+
+Step 3 — Service Profile:
+  Service Price regions (each one selected adds a cell):
+                        cells E2 E3 E4 E5 E6
+  Project Sector tags:  cells F1 F2 F3
+  Company Role:         cells F4 F5
+  Specialization tags:  cells F6 G1 G2
+
+When all fields on all 3 steps are complete, all 48 cells 
+are filled — cube appears fully solid, same as the logo.
+
+The parent signup component tracks which fields have valid 
+values and passes the corresponding cell IDs down to 
+<BuildSmartCube filledCells={filledCells} />.
+
+=====================================================================
+FIX 2 — Auth pages layout (applies to Login + all 3 SignUp steps)
+=====================================================================
+
+All auth pages share the same two-column layout:
+- Left column (40% width): dark red-to-orange gradient 
+  background (match the Figma — deep red at top, orange at 
+  bottom), contains <BuildSmartCube /> centered vertically
+- Right column (60% width): white background, contains the 
+  form card with no outer border, just the content
+
+The "BUILDSMART" wordmark or logo text sits above the cube 
+on the left side. No sidebar, no topbar on any auth page.
+
+=====================================================================
+FIX 3 — SignUp.tsx: rebuild as a 3-step wizard
+=====================================================================
+
+Replace the current single-page SignUp.tsx with a 3-step 
+wizard. Each step is a separate view within the same route 
+(/signup) — no page navigation between steps, just 
+conditional rendering. "Continue ›" advances the step, 
+back arrow goes back. The cube on the left updates live 
+as each field gets a valid value.
+
+STEP 1 — "WELCOME TO BUILDSMART!" (matches Sign_Up.png):
+  - Company logo upload: dashed drop zone, "Upload Company 
+    Logo", "PNG, JPG, up to 5MB". On file select, preview 
+    the image inside the drop zone and mark logo cells filled
+  - Company Name * (text input, full placeholder text 
+    cleared — no "Buildsmart Inc." default)
+  - Office Phone Number * (placeholder: "(+63) 9__ ___ ____")
+  - Company Address * (full width)
+  - City / Municipality *
+  - Province / Region *
+  Button: "Continue ›" (orange, pill shape, bottom right)
+
+STEP 2 — "CONTACT AND ACCESS" (matches Sign_Up (1).png):
+  - Email Address * (maps to users.email)
+  - Office Phone Number * (maps to companies.contact_number 
+    — note this appears on both Step 1 and Step 2 in the 
+    Figma; use Step 2's version as the canonical save, 
+    Step 1 collection is just for UX flow; save both to the 
+    same field)
+  - Password *
+  - Re-type Password * (client-side match validation only, 
+    not saved)
+  Button: "Continue ›"
+  Back arrow: top left, returns to Step 1
+
+STEP 3 — "SERVICE PROFILE" (matches Sign_Up (2).png):
+  - Service Price: multi-select pill tags
+    Options: Metro Manila, Luzon, Visayas, Mindanao, 
+    Central Luzon
+    Selected = filled/highlighted pill, unselected = outlined
+    Maps to: companies.region (store as array or 
+    comma-separated — pick whichever the schema supports)
+
+  - Project Sector: multi-select pill tags
+    Options: Industrial, Residential, Commercial, 
+    Institutional, Mixed-Use, Renovation/Fit-out
+    Maps to: companies.project_sector (array)
+
+  - Company Role: single-select dropdown
+    Placeholder: "-Select your role-"
+    Options: General Contractor, Subcontractor, Developer, 
+    Estimator, Quantity Surveyor
+    Maps to: companies.company_role
+
+  - Service Specialization: multi-select pill tags
+    Options: Structural Works, Electrical, 
+    Architectural Finishes (show at minimum; add: 
+    Plumbing, Waterproofing, Roofing to match the 
+    company specialization fields in the DB)
+    Maps to: companies.specialization (array)
+
+  Button: "Log In ›" (this is the final submit button — 
+  label matches the Figma exactly)
+  Back arrow: returns to Step 2
+
+ON SUBMIT (Step 3 "Log In ›" click):
+  POST /api/auth/register with all collected data:
+  {
+    username: email,       -- use email as the login username
+    email,
+    password,
+    company: {
+      name, company_address, contact_number, city,
+      region (from Service Price selection),
+      project_sector, company_role,
+      specialization, company_logo
+    }
+  }
+  On success: redirect to /onboarding (Step 1 — Pricelist 
+  Upload). Set onboarding_step = 0 on the new user row.
+  On error: show inline error on the relevant field, stay 
+  on current step.
+
+FIX 4 — Login.tsx: create from scratch
+
+Same two-column layout as SignUp (left panel 40%, white 
+form right 60%).
+
+LEFT PANEL — animated gradient backdrop:
+  The left panel background is an animated slow-moving 
+  gradient. Use a CSS keyframe animation that continuously 
+  rotates or shifts the gradient angle:
+
+  background: linear-gradient(var(--angle), #8B1A00, #E07B00);
+
+  @keyframes gradientRotate {
+    0%   { --angle: 135deg; }
+    50%  { --angle: 195deg; }
+    100% { --angle: 135deg; }
+  }
+
+  animation: gradientRotate 10s ease-in-out infinite;
+
+  (Use @property to register --angle as a CSS custom 
+  property so it can be animated, or use a background-
+  position shift on a larger diagonal gradient as a 
+  fallback if @property is not supported in the build 
+  environment.)
+
+  The BuildSmart cube logo sits centered on this panel, 
+  fully static, fully opaque, no animation on the logo 
+  itself. Do NOT animate any individual brick cells on 
+  the login page — the brick-filling interaction is 
+  exclusive to the signup wizard.
+
+RIGHT PANEL — login form:
+  Title: "WELCOME BACK" (bold, uppercase, same 
+    typographic style as "WELCOME TO BUILDSMART!")
+  Subtitle: "Sign in to your account"
+  Divider line below subtitle (matches signup style)
+
+  Fields:
+    Email Address * (maps to users.username/email)
+    Password * (with show/hide toggle eye icon)
+    
+  Row below password field:
+    Left: "Remember me" checkbox + label
+    Right: "Forgot password?" text link 
+      (no route behind it — placeholder only, 
+       render as a disabled-looking link or 
+       add a toast "Feature coming soon" on click)
+
+  Button: "Log In ›" (same orange pill style, 
+    bottom right, matches signup Continue button 
+    exactly)
+
+  Below button: 
+    "Don't have an account? Sign Up" 
+    → links to /signup
+
+  On submit: POST /api/auth/login 
+    { username: emailValue, password }
+  On success:
+    - If onboarding_step < 2: redirect to /onboarding
+    - If onboarding_step >= 2: redirect to /dashboard
+  On failure: inline error below password field: 
+    "Invalid email or password." 
+    Do not clear the email field. Clear password only.
+  While submitting: disable the button, show a 
+    spinner inside it — use the existing loading 
+    pattern from PricelistManagement.tsx
+
+
+=====================================================================
+FIX 5 — Auth routes and context
+=====================================================================
+
+Add to server/routes.ts:
+  POST /api/auth/register
+    - Create company record first, get company_id
+    - Create user record with company_id, 
+      onboarding_step = 0
+    - Return { user, token } (use express-session or JWT — 
+      match whatever session pattern the existing routes use)
+
+  POST /api/auth/login
+    - Validate username/email + password
+    - Return { user, token }
+    - Set session
+
+  POST /api/auth/logout
+    - Clear session, return 200
+
+  GET /api/auth/me
+    - Return current user from session
+    - 401 if no session
+
+Create client/src/context/AuthContext.tsx:
+  - Stores: currentUser (id, email, company_id, 
+    onboarding_step, user_role)
+  - On app boot: GET /api/auth/me to rehydrate. 
+    If 401 → redirect to /login
+  - Exposes: login(), logout(), currentUser, isAuthenticated
+
+Update client/src/App.tsx:
+  - Wrap in <AuthProvider>
+  - Add routes: /login → Login.tsx, /signup → SignUp.tsx
+  - All routes except /login and /signup require 
+    isAuthenticated — if not, redirect to /login
+
+=====================================================================
+FIX 6 — Move onboarding gate from localStorage to DB
+=====================================================================
+
+Update client/src/context/AppContext.tsx:
+  - Remove ALL localStorage reads/writes
+  - Read initial onboarding_step from 
+    AuthContext.currentUser.onboarding_step
+  - advanceOnboarding(step) must:
+    1. Call PATCH /api/users/onboarding-step { step }
+    2. Update AuthContext.currentUser.onboarding_step
+    3. Update local state ONLY after API succeeds
+    4. On API failure: show toast error, do not advance
+
+Add to server/routes.ts:
+  PATCH /api/users/onboarding-step
+    - Update users.onboarding_step for authenticated user
+    - Return updated user
+
+=====================================================================
+FIXES 7–9 (unchanged from previous prompt — include these)
+=====================================================================
+
+FIX 7 — Build SupplierBenchmarking.tsx and fix /suppliers route
+FIX 8 — Deepen QuotationGeneration.tsx pricing pipeline order
+FIX 9 — Extend MarketIntelligence.tsx with region filter, 
+         variance cards, and Gemini interpretive summaries
+
+(Full specs for these three are in the previous prompt 
+already submitted — do not omit them, carry them forward 
+exactly as written.)
+
+=====================================================================
+INTEGRITY RULES
+=====================================================================
+
+- Placeholder text in the Figma ("Buildsmart Inc.", 
+  "Fairview 123", "(+63) 967 387 1977") are design 
+  placeholders only — render them as HTML placeholder 
+  attributes, never as defaultValue. Fields must be 
+  blank on load.
+- "Province / Region" has a typo in the Figma 
+  ("Reigion") — fix the spelling in the actual UI.
+- "Tell us whaat your company does" has a typo in the 
+  Figma ("whaat") — fix it in the actual UI.
+- Every new page uses the existing shadcn/ui components 
+  only — no new UI libraries.
+- Preserve all existing Gemini API integrations.
+- After all fixes, verify:
+  1. /signup loads blank, 3-step wizard works, cube 
+     animates as fields are filled
+  2. /login loads, submits, redirects correctly based 
+     on onboarding_step
+  3. New account is forced through /pricelist then 
+     /management before /dashboard
+  4. Browser refresh on any protected page does not 
+     reset onboarding state
+  5. /suppliers renders SupplierBenchmarking, not 
+     Dashboard
+

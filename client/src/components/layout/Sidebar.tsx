@@ -1,20 +1,21 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, FileText, FolderOpen, FileSpreadsheet, Tag, Truck, Users, Settings, Lock, TrendingUp } from "lucide-react";
+import { LayoutDashboard, FileText, FolderOpen, FileSpreadsheet, Tag, Truck, Users, Settings, Lock, TrendingUp, LogOut } from "lucide-react";
 import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 
 const NAV_ITEMS = [
-  { label: "Dashboard",     icon: LayoutDashboard, href: "/dashboard",  minStep: 2 },
-  { label: "Blueprints",    icon: FileText,         href: "/blueprints", minStep: 2 },
-  { label: "Projects",      icon: FolderOpen,       href: "/projects",   minStep: 2 },
-  { label: "Quotations",    icon: FileSpreadsheet,  href: "/quotations", minStep: 2 },
+  { label: "Dashboard",   icon: LayoutDashboard, href: "/dashboard",  minStep: 2 },
+  { label: "Blueprints",  icon: FileText,         href: "/blueprints", minStep: 2 },
+  { label: "Projects",    icon: FolderOpen,       href: "/projects",   minStep: 2 },
+  { label: "Quotations",  icon: FileSpreadsheet,  href: "/quotations", minStep: 2 },
 ];
 
 const SETTINGS_ITEMS = [
-  { label: "Pricelist",   icon: Tag,        href: "/pricelist",   minStep: 0 },
-  { label: "Management",  icon: Users,      href: "/management",  minStep: 1 },
-  { label: "Market Intel",icon: TrendingUp, href: "/analysis",    minStep: 2 },
-  { label: "Suppliers",   icon: Truck,      href: "/suppliers",   minStep: 2 },
-  { label: "Settings",    icon: Settings,   href: "/settings",    minStep: 2 },
+  { label: "Pricelist",    icon: Tag,        href: "/pricelist",  minStep: 0 },
+  { label: "Management",   icon: Users,      href: "/management", minStep: 1 },
+  { label: "Market Intel", icon: TrendingUp, href: "/analysis",   minStep: 2 },
+  { label: "Suppliers",    icon: Truck,      href: "/suppliers",  minStep: 2 },
+  { label: "Settings",     icon: Settings,   href: "/settings",   minStep: 2 },
 ];
 
 function NavItem({ item, onboardingStep }: { item: typeof NAV_ITEMS[0]; onboardingStep: number }) {
@@ -53,6 +54,11 @@ function NavItem({ item, onboardingStep }: { item: typeof NAV_ITEMS[0]; onboardi
 
 export function Sidebar() {
   const { onboardingStep } = useApp();
+  const { currentUser, logout } = useAuth();
+
+  const initials = currentUser?.email
+    ? currentUser.email.slice(0, 2).toUpperCase()
+    : "BS";
 
   return (
     <aside className="flex h-screen w-[160px] flex-shrink-0 flex-col bg-white shadow-[2px_0_8px_rgba(0,0,0,0.08)]">
@@ -71,7 +77,7 @@ export function Sidebar() {
         </div>
       )}
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-2 py-3">
+      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
         {NAV_ITEMS.map(item => (
           <NavItem key={item.href} item={item} onboardingStep={onboardingStep} />
         ))}
@@ -85,11 +91,30 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {onboardingStep >= 2 && (
-        <div className="mx-2 mb-3 rounded-lg border border-green-200 bg-green-50 p-2 text-center">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-green-600">✓ Account Active</p>
+      {/* User info + logout */}
+      <div className="border-t border-gray-100 px-2 py-2">
+        <div className="flex items-center gap-2 rounded-lg px-2 py-2">
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#E07B39] text-[10px] font-bold text-white">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[10px] font-semibold text-gray-700">
+              {currentUser?.email?.split("@")[0] ?? "User"}
+            </p>
+            <p className="truncate text-[9px] text-gray-400">
+              {onboardingStep >= 2 ? "✓ Active" : "Setting up…"}
+            </p>
+          </div>
+          <button
+            onClick={logout}
+            title="Log out"
+            className="flex-shrink-0 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 transition"
+            data-testid="button-logout"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
-      )}
+      </div>
     </aside>
   );
 }

@@ -17,7 +17,8 @@ export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser & { companyId?: string }): Promise<User>;
   updateUserOnboarding(id: string, step: number, companyId?: string): Promise<User>;
 
   // Companies
@@ -91,8 +92,18 @@ export class MemStorage implements IStorage {
   async getUserByUsername(username: string) {
     return [...this.users.values()].find(u => u.username === username);
   }
-  async createUser(data: InsertUser): Promise<User> {
-    const user: User = { ...data, id: randomUUID(), companyId: null, onboardingStep: 0 };
+  async getUserByEmail(email: string) {
+    return [...this.users.values()].find(u => u.email === email || u.username === email);
+  }
+  async createUser(data: InsertUser & { companyId?: string }): Promise<User> {
+    const user: User = {
+      id: randomUUID(),
+      username: data.username,
+      email: data.email ?? null,
+      password: data.password,
+      companyId: data.companyId ?? null,
+      onboardingStep: 0,
+    };
     this.users.set(user.id, user);
     return user;
   }
@@ -107,7 +118,19 @@ export class MemStorage implements IStorage {
   // Companies
   async getCompany(id: string) { return this.companies.get(id); }
   async createCompany(data: InsertCompany): Promise<Company> {
-    const company: Company = { ...data, id: randomUUID(), createdAt: this.now() };
+    const company: Company = {
+      id: randomUUID(),
+      name: data.name,
+      region: data.region ?? "NCR",
+      specialization: data.specialization ?? [],
+      companyAddress: data.companyAddress ?? "",
+      contactNumber: data.contactNumber ?? "",
+      companyLogo: data.companyLogo ?? null,
+      city: data.city ?? "",
+      projectSector: data.projectSector ?? null,
+      companyRole: data.companyRole ?? null,
+      createdAt: this.now(),
+    };
     this.companies.set(company.id, company);
     return company;
   }
@@ -262,7 +285,6 @@ export class MemStorage implements IStorage {
   async updateSupplierDiscountRule(id: number, updates: Partial<SupplierDiscountRule>): Promise<SupplierDiscountRule> {
     const idx = this.supplierDiscountRules.findIndex(r => r.id === id);
     if (idx === -1) throw new Error("Not found");
-    // block disable if referenced in quotations
     if (updates.isActive === false && this.supplierDiscountRules[idx].referencedInQuotations > 0) {
       throw new Error("DEPENDENCY: Rule is referenced in active quotations");
     }
