@@ -1,0 +1,111 @@
+You have two tasks. Complete both in order.
+
+=====================================================================
+TASK 1 — Create the BuildSmartLogo component
+=====================================================================
+
+Create client/src/components/BuildSmartLogo.tsx with 
+exactly this structure. Do not modify any path data, 
+coordinates, or colors from the SVG frames.
+
+The component accepts one prop:
+  filledCount?: number  (0–13, default 13)
+
+Mapping:
+  filledCount 0 or 1 → show Frame 1  (5 bricks lit)
+  filledCount 2      → show Frame 2  (10 bricks lit)
+  filledCount 3      → show Frame 3
+  ...
+  filledCount 13     → show Frame 13 (all 72 lit)
+
+Frame transitions: add CSS transition: opacity 0.3s ease
+on the wrapping div only — not on individual paths.
+
+The 13 frames are the SVG files from Field 1.svg through
+Field 13.svg (uploaded to this chat). All 13 files share
+identical path geometry — only the opacity="0.1" 
+attributes differ between frames to indicate dimmed vs 
+filled bricks. Field 13.svg has zero dimmed bricks (full 
+cube, all paths at full opacity).
+
+const frames = [
+  /* Frame 1  — paste full content of Field 1.svg  */,
+  /* Frame 2  — paste full content of Field 2.svg  */,
+  /* Frame 3  — paste full content of Field 3.svg  */,
+  /* Frame 4  — paste full content of Field 4.svg  */,
+  /* Frame 5  — paste full content of Field 5.svg  */,
+  /* Frame 6  — paste full content of Field 6.svg  */,
+  /* Frame 7  — paste full content of Field 7.svg  */,
+  /* Frame 8  — paste full content of Field 8.svg  */,
+  /* Frame 9  — paste full content of Field 9.svg  */,
+  /* Frame 10 — paste full content of Field 10.svg */,
+  /* Frame 11 — paste full content of Field 11.svg */,
+  /* Frame 12 — paste full content of Field 12.svg */,
+  /* Frame 13 — paste full content of Field 13.svg */,
+];
+
+interface BuildSmartLogoProps {
+  filledCount?: number;
+}
+
+export default function BuildSmartLogo({
+  filledCount = 13
+}: BuildSmartLogoProps) {
+  const clamped = Math.max(0, Math.min(13, filledCount));
+  const adjustedIndex = clamped === 0 ? 0 : clamped - 1;
+
+  return (
+    <div style={{ transition: 'all 0.3s ease' }}>
+      {frames[adjustedIndex]}
+    </div>
+  );
+}
+
+=====================================================================
+TASK 2 — Replace logos and update tagline everywhere
+=====================================================================
+
+2A. LOGIN PAGE (Login.tsx)
+Replace the current logo on the left panel (the wrong 
+chevron/diamond shape) with:
+
+  <BuildSmartLogo />
+
+No filledCount prop — the default of 13 means the full 
+cube is always shown on the login page. Import the 
+component from client/src/components/BuildSmartLogo.tsx.
+
+2B. SIGNUP PAGE (SignUp.tsx)
+Replace the current left panel logo with:
+
+  <BuildSmartLogo filledCount={countValidFields()} />
+
+Where countValidFields() is already implemented in the 
+signup wizard and returns 0–13 based on how many of the 
+13 fields currently have valid values. The logo animates 
+as the user fills out each step — it does NOT jump to a 
+late frame just because the user filled a late field 
+first; it only responds to the total count of valid 
+fields, not which specific field was filled.
+
+2C. TAGLINE — global find and replace
+Search the entire codebase for the exact string:
+  "Construction Estimating Platform"
+Replace every instance with:
+  "AI-Powered Quotation Platform"
+This applies to Login.tsx, SignUp.tsx, and any other 
+file that references this string. Case-sensitive.
+
+=====================================================================
+RULES — apply to both tasks
+=====================================================================
+
+- Do not modify any SVG path data, coordinates, 
+  viewBox values, or fill colors from the uploaded files
+- Do not reference SVGs as external files or img tags — 
+  inline only, inside the frames array
+- Do not touch routing, auth logic, form fields, 
+  server routes, database schema, or any component 
+  not explicitly named above
+- Do not regenerate or approximate the logo shape — 
+  use only the exact paths from the uploaded SVG files
