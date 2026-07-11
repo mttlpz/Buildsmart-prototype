@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { scryptSync, randomBytes, timingSafeEqual } from "crypto";
-import { storage } from "./storage";
+import { storage, DEMO_COMPANY_ID } from "./storage";
 import {
   insertPriceRecordSchema,
   insertMaterialRuleSchema,
@@ -14,8 +14,6 @@ import {
   insertHistoricalPriceRecordSchema,
 } from "@shared/schema";
 import { z } from "zod";
-
-const DEMO_COMPANY_ID = "demo-company-001";
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -81,12 +79,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
 
     const hashedPw = hashPassword(password);
-    const user = await storage.createUser({
+    const createdUser = await storage.createUser({
       username: email,
       email,
       password: hashedPw,
       companyId: companyRecord.id,
     });
+    const user = await storage.updateUserOnboarding(createdUser.id, 2);
 
     req.session.userId = user.id;
     req.session.companyId = companyRecord.id;

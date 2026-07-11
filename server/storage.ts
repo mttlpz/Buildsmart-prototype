@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes, scryptSync } from "crypto";
 import type {
   User, InsertUser,
   Company, InsertCompany,
@@ -70,6 +70,16 @@ export interface IStorage {
   updateQuotation(id: number, updates: Partial<Quotation>): Promise<Quotation>;
 }
 
+export const DEMO_COMPANY_ID = "demo-company-001";
+export const ADMIN_EMAIL = "admin@buildsmart.com";
+export const ADMIN_PASSWORD = "admin123";
+
+function hashPassword(password: string): string {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(password, salt, 32).toString("hex");
+  return `${salt}:${hash}`;
+}
+
 export class MemStorage implements IStorage {
   private users = new Map<string, User>();
   private companies = new Map<string, Company>();
@@ -83,6 +93,37 @@ export class MemStorage implements IStorage {
   private supplierDiscountRules: SupplierDiscountRule[] = [];
   private quotations: Quotation[] = [];
   private idCounter = 1;
+
+  constructor() {
+    this.seedAdmin();
+  }
+
+  private seedAdmin() {
+    const company: Company = {
+      id: DEMO_COMPANY_ID,
+      name: "BuildSmart Demo Co.",
+      region: "NCR",
+      specialization: [],
+      companyAddress: "",
+      contactNumber: "",
+      companyLogo: null,
+      city: "",
+      projectSector: null,
+      companyRole: null,
+      createdAt: this.now(),
+    };
+    this.companies.set(company.id, company);
+
+    const admin: User = {
+      id: randomUUID(),
+      username: ADMIN_EMAIL,
+      email: ADMIN_EMAIL,
+      password: hashPassword(ADMIN_PASSWORD),
+      companyId: company.id,
+      onboardingStep: 0,
+    };
+    this.users.set(admin.id, admin);
+  }
 
   private nextId() { return this.idCounter++; }
   private now() { return new Date(); }
